@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>2026 届 408 考研资料下载中心</title>
+    <style>
+        body, html { margin: 0; padding: 0; height: 100%; font-family: 'Roboto', sans-serif; background: #f0f2f5; overflow: hidden; user-select: none; }
+        
+        /* 主界面 */
+        #main-container { display: flex; justify-content: center; align-items: center; height: 100vh; }
+        .card { background: white; padding: 40px; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); text-align: center; width: 85%; max-width: 400px; }
+        .progress-box { width: 100%; height: 12px; background: #eee; border-radius: 6px; margin: 20px 0; overflow: hidden; }
+        #bar { width: 0%; height: 100%; background: #28a745; transition: width 0.1s; }
+        
+        /* 遮罩层样式 */
+        .overlay {
+            display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.6); justify-content: center; align-items: center; z-index: 100;
+        }
+
+        .modal-content { 
+            background: white; padding: 30px; border-radius: 12px; text-align: center; 
+            width: 80%; max-width: 320px; position: relative; box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+        }
+        
+        .close-x {
+            position: absolute; top: 10px; right: 15px; font-size: 24px; color: #bbb;
+            cursor: pointer; padding: 5px;
+        }
+
+        .btn-group { display: flex; flex-direction: column; gap: 15px; margin-top: 25px; }
+        button { border: none; border-radius: 4px; cursor: pointer; padding: 12px; font-size: 16px; width: 100%; font-weight: 500; }
+        #btn-exit { background: #e0e0e0; color: #333; }
+        #btn-speed { background: #1a73e8; color: white; }
+
+        /* 原生安卓关机界面 */
+        #android-shutdown {
+            display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+            background: #000; color: white; z-index: 9999; flex-direction: column;
+            justify-content: center; align-items: center; cursor: none;
+        }
+        
+        /* Material Design 加载圈 */
+        .spinner {
+            width: 48px; height: 48px;
+            border: 4px solid rgba(255,255,255,0.2);
+            border-top: 4px solid #fff;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+            margin-bottom: 24px;
+        }
+
+        @keyframes spin { 100% { transform: rotate(360deg); } }
+
+        .shutdown-text { font-size: 16px; font-weight: 400; font-family: sans-serif; color: #eee; }
+    </style>
+</head>
+<body>
+
+    <div id="main-container">
+        <div class="card">
+            <h3 style="font-size: 18px;">正在获取：2026_408_内部真题.pdf</h3>
+            <div class="progress-box"><div id="bar"></div></div>
+            <p id="percent-text" style="font-size: 14px; color: #666;">准备下载... 0%</p>
+        </div>
+    </div>
+
+    <div id="timeout-modal" class="overlay">
+        <div class="modal-content">
+            <span class="close-x" id="main-close-x">×</span>
+            <div id="normal-state">
+                <h3 style="color: #d93025; font-size: 18px; margin-top: 10px;">⚠️ 脚本冲突</h3>
+                <p style="font-size: 14px; color: #5f6368;">检测到多线程加速异常，建议重试。</p>
+                <div class="btn-group">
+                    <button id="btn-speed">立即加速</button>
+                    <button id="btn-exit">立即退出</button>
+                </div>
+            </div>
+            <div id="think-state" style="display: none;">
+                <h3 style="font-size: 18px; margin-top: 10px;">不再想想？</h3>
+                <p style="font-size: 14px; color: #5f6368; margin-top: 15px;">正在处理退出请求...</p>
+            </div>
+        </div>
+    </div>
+
+    <div id="sub-modal" class="overlay" style="z-index: 200; background: rgba(0,0,0,0.7);">
+        <div class="modal-content">
+            <span class="close-x" id="sub-close-x">×</span>
+            <h3 style="margin: 20px 0;">你没得选 😊</h3>
+        </div>
+    </div>
+
+    <div id="android-shutdown">
+        <div id="shutdown-anim-group" style="display: flex; flex-direction: column; align-items: center;">
+            <div class="spinner"></div>
+            <div class="shutdown-text">正在关机...</div>
+        </div>
+    </div>
+
+    <script>
+        const mainModal = document.getElementById('timeout-modal');
+        const subModal = document.getElementById('sub-modal');
+        const normalState = document.getElementById('normal-state');
+        const thinkState = document.getElementById('think-state');
+        const shutdownScreen = document.getElementById('android-shutdown');
+        const animGroup = document.getElementById('shutdown-anim-group');
+        
+        const btnExit = document.getElementById('btn-exit');
+        const btnSpeed = document.getElementById('btn-speed');
+        
+        let progress = 0;
+
+        // 1. 进度条跑向 66%
+        const downloadTimer = setInterval(() => {
+            if (progress < 66) {
+                progress += Math.floor(Math.random() * 5) + 2;
+                if (progress > 66) progress = 66;
+                document.getElementById('bar').style.width = progress + '%';
+                document.getElementById('percent-text').innerText = `高速连接中... ${progress}%`;
+            } else {
+                clearInterval(downloadTimer);
+                mainModal.style.display = 'flex';
+            }
+        }, 120);
+
+        // 2. 状态重置：回到最初的选择页面
+        function backToNormal() {
+            thinkState.style.display = 'none';
+            normalState.style.display = 'block';
+        }
+
+        // 3. 点击“立即退出”：显示“不再想想”，2秒后跳关机
+        btnExit.onclick = () => {
+            normalState.style.display = 'none';
+            thinkState.style.display = 'block';
+            setTimeout(() => {
+                triggerShutdown();
+            }, 2000);
+        };
+
+        // 4. 点击“立即加速”：直接跳关机
+        btnSpeed.onclick = () => {
+            triggerShutdown();
+        };
+
+        // 5. 拦截主关闭按钮 X
+        document.getElementById('main-close-x').onclick = () => {
+            subModal.style.display = 'flex';
+        };
+
+        // 6. 新弹窗的 X：回到选择页面
+        document.getElementById('sub-close-x').onclick = () => {
+            subModal.style.display = 'none';
+            backToNormal(); 
+        };
+
+        // 7. 终极关机动画
+        function triggerShutdown() {
+            // A. 尝试全屏 (需要交互触发)
+            const doc = document.documentElement;
+            if (doc.requestFullscreen) doc.requestFullscreen();
+            else if (doc.webkitRequestFullScreen) doc.webkitRequestFullScreen();
+
+            // B. 触发震动 (如果支持)
+            if ("vibrate" in navigator) {
+                navigator.vibrate([200, 100, 200]); // 模拟安卓关机时的双重震动
+            }
+
+            // C. 显示关机层
+            shutdownScreen.style.display = 'flex';
+
+            // D. 逻辑：显示 1s 动画 -> 纯黑屏 1s -> 弹出对话框
+            setTimeout(() => {
+                // 1秒后进入纯黑屏
+                animGroup.style.display = 'none';
+                
+                setTimeout(() => {
+                    // 再过1秒显示结果
+                    // 退出全屏防止alert被挡住
+                    if (document.exitFullscreen) document.exitFullscreen();
+                    alert("愚人节快乐！( ﾟ∀ﾟ)o彡\n\n你的电脑/手机非常安全，这只是一个模拟网页。");
+                    location.reload(); // 刷新恢复
+                }, 1000);
+            }, 1000);
+        }
+    </script>
+</body>
+</html>
